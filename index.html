@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b1220"><title>Signal Lab</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--panel:#111c2e;--panel2:#16243a;--line:#26364d;--text:#edf4ff;--muted:#8fa2bd;--green:#35d39a;--red:#ff6f7d;--blue:#75a7ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px system-ui,-apple-system,Segoe UI,sans-serif}
+header{padding:18px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{font-weight:800;font-size:19px;letter-spacing:.3px}.brand span{color:var(--green)}.status{font-size:12px;color:var(--muted);display:flex;gap:7px;align-items:center}.dot{width:8px;height:8px;background:#f5ba52;border-radius:50%}
+main{max-width:1000px;margin:auto;padding:16px;display:grid;gap:14px}.grid{display:grid;grid-template-columns:1.4fr 1fr;gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;min-width:0}
+h2{font-size:15px;margin:0 0 14px}label{display:block;color:var(--muted);font-size:12px;margin-bottom:6px}select,button{font:inherit;border:1px solid var(--line);border-radius:10px;padding:11px 12px;background:var(--panel2);color:var(--text);width:100%}button{cursor:pointer;font-weight:700}button.primary{background:var(--green);color:#071a15;border:0}button:disabled{opacity:.5;cursor:not-allowed}.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px}.price{font-size:27px;font-weight:800;margin:12px 0 4px}.muted{color:var(--muted);font-size:12px}.chart{height:205px;background:#0c1626;border:1px solid var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;text-align:center;padding:18px;color:var(--muted);margin-top:12px;line-height:1.6}.signal{font-size:30px;font-weight:900;letter-spacing:1px;margin:10px 0}.signal.wait{color:#f5ba52}.signal.call{color:var(--green)}.signal.put{color:var(--red)}.pill{display:inline-block;border:1px solid var(--line);padding:5px 9px;border-radius:99px;font-size:11px;color:var(--muted)}.row{display:flex;justify-content:space-between;align-items:center;gap:10px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{background:var(--panel2);padding:12px;border-radius:11px}.stat b{font-size:21px;display:block;margin-top:5px}.history{overflow:auto}table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:left;padding:10px 7px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--muted);font-weight:600}.note{font-size:12px;color:var(--muted);line-height:1.6}.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.foot{padding:4px 4px 22px;color:var(--muted);font-size:11px;line-height:1.6}
+@media(max-width:700px){.grid{grid-template-columns:1fr}main{padding:12px}.card{padding:14px}.price{font-size:24px}}
+</style></head>
+<body>
+<header><div class="brand">QUOTEX <span>SIGNAL LAB</span></div><div class="status"><i class="dot" id="dot"></i><span id="connection">No market feed connected</span></div></header>
+<main>
+<div class="grid">
+<section class="card">
+<div class="row"><h2>Market monitor</h2><span class="pill">READ-ONLY</span></div>
+<div class="controls">
+<div><label for="market">Market type</label><select id="market"><option>Forex</option><option>OTC</option></select></div>
+<div><label for="pair">Trading pair</label><select id="pair"><option>EUR/USD</option><option>GBP/USD</option><option>USD/JPY</option><option>AUD/USD</option><option>USD/CAD</option><option>BTC/USD</option><option>XAU/USD</option></select></div>
+<div><label for="tf">Analysis timeframe</label><select id="tf"><option value="1">1 minute</option><option value="5">5 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">1 hour</option><option value="240">4 hours</option><option value="D">1 day</option></select></div>
+<div><label for="expiry">Signal expiry</label><select id="expiry"><option value="60">1 minute</option><option value="300">5 minutes</option><option value="900">15 minutes</option></select></div>
+</div>
+<div class="price" id="price">—</div><div class="muted" id="priceNote">Price unavailable — connect a real market-data backend.</div>
+<div class="chart" id="chart">No live candles loaded.<br>Prices are intentionally not simulated.</div>
+<p class="note">OTC quotes are platform-specific. A normal forex feed cannot verify Quotex OTC prices.</p>
+</section>
+<section class="card">
+<div class="row"><h2>AI-style analysis</h2><span class="pill">INDICATOR-BASED</span></div>
+<div class="signal wait" id="signal">WAIT</div><div class="muted" id="signalReason">Waiting for real candle data. No prediction has been made.</div>
+<hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
+<div class="row"><span class="muted">Expiry countdown</span><b id="countdown">01:00</b></div>
+<div style="height:7px;background:#26364d;border-radius:9px;overflow:hidden;margin:10px 0 15px"><div id="bar" style="height:100%;width:100%;background:var(--blue)"></div></div>
+<button class="primary" id="analyze">Analyze latest candles</button>
+<p class="note">CALL/PUT only appears when the connected backend supplies enough real candles and the basic indicator conditions agree. This is not a proven AI model or a guarantee.</p>
+</section></div>
+<section class="card">
+<div class="row"><h2>Signal results</h2><button id="clear" style="width:auto;padding:7px 10px;font-size:12px">Clear history</button></div>
+<div class="stats">
+<div class="stat"><span class="muted">Settled</span><b id="settled">0</b></div><div class="stat"><span class="muted">Wins</span><b id="wins">0</b></div><div class="stat"><span class="muted">Losses</span><b id="losses">0</b></div>
+</div>
+<p class="note">Record an outcome only after the expiry has passed. Results are stored on this device and are not independently verified.</p>
+<div class="history"><table><thead><tr><th>Time</th><th>Pair</th><th>Signal</th><th>Expiry</th><th>Outcome</th><th>Record</th></tr></thead><tbody id="history"><tr><td colspan="6" class="muted">No signals recorded yet.</td></tr></tbody></table></div>
+</section>
+<div class="foot">Risk notice: short-expiry binary-style trades are highly risky and may lose the full stake. This tool does not place trades, connect to your Quotex account, or promise profits. Keep API keys on a server, never in this page's JavaScript.</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let remaining=60, ticker=null, candles=[], latestSignal="WAIT";
+const fmt=s=>String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");
+function resetTimer(){remaining=Number($("expiry").value);renderTimer()}
+function renderTimer(){$("countdown").textContent=fmt(remaining);$("bar").style.width=(remaining/Number($("expiry").value)*100)+"%"}
+setInterval(()=>{remaining=remaining>0?remaining-1:Number($("expiry").value);renderTimer()},1000);
+$("expiry").addEventListener("change",resetTimer);
+function setStatus(ok,msg){$("connection").textContent=msg;$("dot").style.background=ok?"#35d39a":"#f5ba52"}
+function renderHistory(){let h=[];try{h=JSON.parse(localStorage.getItem("signalHistory")||"[]")}catch{};let wins=h.filter(x=>x.outcome==="WIN").length,losses=h.filter(x=>x.outcome==="LOSS").length,settled=wins+losses;$("settled").textContent=settled;$("wins").textContent=wins;$("losses").textContent=losses;$("history").innerHTML=h.length?h.slice().reverse().map((x,i)=>`<tr><td>${x.time}</td><td>${x.pair}</td><td>${x.signal}</td><td>${x.expiry}s</td><td>${x.outcome}</td><td>${x.outcome==="PENDING"?`<button data-i="${h.length-1-i}" data-o="WIN">Win</button> <button data-i="${h.length-1-i}" data-o="LOSS">Loss</button>`:"Recorded"}</td></tr>`).join(""):'<tr><td colspan="6" class="muted">No signals recorded yet.</td></tr>'}
+function saveHistory(h){localStorage.setItem("signalHistory",JSON.stringify(h));renderHistory()}
+$("history").addEventListener("click",e=>{let b=e.target.closest("button[data-i]");if(!b)return;let h=JSON.parse(localStorage.getItem("signalHistory")||"[]");let i=Number(b.dataset.i);if(h[i])h[i].outcome=b.dataset.o;saveHistory(h)});
+$("clear").onclick=()=>{if(confirm("Clear all locally stored signal history?")){localStorage.removeItem("signalHistory");renderHistory()}};
+async function loadCandles(){
+ const pair=$("pair").value, market=$("market").value;
+ // Expected user-owned backend contract: GET /api/candles?symbol=EUR/USD&timeframe=1&market=Forex
+ const url=`/api/candles?symbol=${encodeURIComponent(pair)}&timeframe=${encodeURIComponent($("tf").value)}&market=${encodeURIComponent(market)}`;
+ try{
+  const r=await fetch(url,{headers:{"Accept":"application/json"}});
+  if(!r.ok)throw Error("Backend returned HTTP "+r.status);
+  const d=await r.json();
+  if(!Array.isArray(d.candles)||d.candles.length<20)throw Error("Backend must return at least 20 real candles");
+  candles=d.candles.filter(c=>[c.open,c.high,c.low,c.close].every(v=>Number.isFinite(Number(v)))).map(c=>({open:+c.open,high:+c.high,low:+c.low,close:+c.close,time:c.time}));
+  if(candles.length<20)throw Error("Not enough valid candle data");
+  setStatus(true,"Live backend connected");
+  $("price").textContent=Number(candles.at(-1).close).toLocaleString(undefined,{maximumFractionDigits:6});
+  $("priceNote").textContent=pair+" · "+market+" · source supplied by your backend";
+  $("chart").textContent=`Loaded ${candles.length} candles from backend. Last candle: ${candles.at(-1).time||"time not supplied"}.`;
+  return true;
+ }catch(e){candles=[];setStatus(false,"Market feed unavailable");$("price").textContent="—";$("priceNote").textContent="No verified live price";$("chart").textContent="Could not load real candles: "+e.message+". Set up /api/candles on your backend. No demo values are shown."; $("signal").textContent="WAIT";$("signal").className="signal wait";$("signalReason").textContent="Analysis disabled until real candle data is available.";return false}
+}
+function ema(values,period){let k=2/(period+1),v=values[0];for(let i=1;i<values.length;i++)v=values[i]*k+v*(1-k);return v}
+$("analyze").onclick=async()=>{
+ $("analyze").disabled=true;$("analyze").textContent="Loading candles…";
+ try{if(!await loadCandles())return;
+ const closes=candles.map(c=>c.close),last=closes.at(-1),fast=ema(closes.slice(-20),5),slow=ema(closes.slice(-20),12),prev=candles.at(-2);
+ let sig="WAIT",reason="Indicators disagree or momentum is weak.";
+ if(fast>slow&&last>prev.close)sig="CALL";
+ if(fast<slow&&last<prev.close)sig="PUT";
+ if(sig!=="WAIT")reason=`EMA(5)/EMA(12) and last-candle direction align. This is a simple rule, not a validated prediction.`;
+ $("signal").textContent=sig;$("signal").className="signal "+sig.toLowerCase();$("signalReason").textContent=reason;latestSignal=sig;
+ if(sig!=="WAIT"){let h=JSON.parse(localStorage.getItem("signalHistory")||"[]");h.push({time:new Date().toLocaleString(),pair:$("pair").value,signal:sig,expiry:$("expiry").value,outcome:"PENDING"});saveHistory(h)}
+ }finally{$("analyze").disabled=false;$("analyze").textContent="Analyze latest candles"}
+};
+["market","pair","tf"].forEach(id=>$(id).addEventListener("change",()=>{candles=[];$("signal").textContent="WAIT";$("signalReason").textContent="Press Analyze to request fresh candles.";setStatus(false,"Market feed not checked")}));
+renderHistory();resetTimer();setStatus(false,"No market feed connected");
+</script></body></html>
